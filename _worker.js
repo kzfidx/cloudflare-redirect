@@ -208,106 +208,157 @@
 
   class BodyRewriter {
     element(element) {
-      element.append(`<div style="display:none">Powered by Cloudflare Workers</div>
-      <script>
-      (function() {
-        try {
-          function fixLinks() {
+        element.append(`<div style="display:none">Powered by Cloudflare Workers</div>
+        <script>
+        (function() {
             try {
-              const links = document.querySelectorAll('a');
-              links.forEach(link => {
-                if (link.href) {
-                  if (link.href.includes('${TARGET_DOMAIN}')) {
-                    link.href = link.href.replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}');
-                  }
+                function fixLinks() {
+                    try {
+                        const links = document.querySelectorAll('a');
+                        links.forEach(link => {
+                            if (link.href) {
+                                // 添加调试信息
+                                console.log('Processing link:', link.href);
+                                
+                                if (link.href.includes('${TARGET_DOMAIN}')) {
+                                    link.href = link.href.replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}');
+                                }
+                                // 改进mailto链接处理
+                                if (link.href.includes('/cdn-cgi/l/email-protection')) {
+                                    try {
+                                        const decodedEmail = decodeEmail(link.href);
+                                        console.log('Decoded email:', decodedEmail);
+                                        // 确保添加mailto:前缀
+                                        link.href = 'mailto:' + decodedEmail;
+                                        // 显示文本改为"Email"
+                                        link.textContent = 'Email';
+                                        // 添加email样式
+                                        link.classList.add('email-link');
+                                        // 添加title提示
+                                        link.title = '发送邮件至 ' + decodedEmail;
+                                    } catch (e) {
+                                        console.error('Email decode error:', e);
+                                    }
+                                }
+                            }
+                        });
+                        
+                        const updateSrcAttributes = (elements, attribute) => {
+                            elements.forEach(el => {
+                                const src = el.getAttribute(attribute);
+                                if (src && src.includes('${TARGET_DOMAIN}')) {
+                                    el.setAttribute(attribute, src.replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}'));
+                                }
+                            });
+                        };
+                        
+                        updateSrcAttributes(document.querySelectorAll('img'), 'src');
+                        updateSrcAttributes(document.querySelectorAll('script'), 'src');
+                        updateSrcAttributes(document.querySelectorAll('link'), 'href');
+                        updateSrcAttributes(document.querySelectorAll('form'), 'action');
+                        
+                        const metaTags = document.querySelectorAll('meta[content]');
+                        metaTags.forEach(meta => {
+                            const content = meta.getAttribute('content');
+                            if (content && content.includes('${TARGET_DOMAIN}')) {
+                                meta.setAttribute('content', content.replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}'));
+                            }
+                        });
+                        
+                        if (window.location.href.includes('${TARGET_DOMAIN}')) {
+                            const newUrl = window.location.href.replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}');
+                            window.history.replaceState({}, document.title, newUrl);
+                        }
+                    } catch (e) {
+                        console.error('Error in fixLinks:', e);
+                    }
                 }
-              });
-              
-              const updateSrcAttributes = (elements, attribute) => {
-                elements.forEach(el => {
-                  const src = el.getAttribute(attribute);
-                  if (src && src.includes('${TARGET_DOMAIN}')) {
-                    el.setAttribute(attribute, src.replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}'));
-                  }
+                
+                // 改进邮件解码函数
+                function decodeEmail(encoded) {
+                    try {
+                        // 获取加密部分
+                        const encryptedPart = encoded.split('#')[1];
+                        if (!encryptedPart) {
+                            throw new Error('Invalid email protection format');
+                        }
+                        
+                        // 获取密钥
+                        const key = parseInt(encryptedPart.substr(0, 2), 16);
+                        if (isNaN(key)) {
+                            throw new Error('Invalid key');
+                        }
+                        
+                        // 解码邮件地址
+                        let decoded = '';
+                        for (let i = 2; i < encryptedPart.length; i += 2) {
+                            const hex = encryptedPart.substr(i, 2);
+                            const charCode = parseInt(hex, 16) ^ key;
+                            decoded += String.fromCharCode(charCode);
+                        }
+                        return decoded;
+                    } catch (e) {
+                        console.error('Decode error:', e);
+                        throw e;
+                    }
+                }
+                
+                // 立即执行并设置定时器定期检查
+                fixLinks();
+                setInterval(fixLinks, 1000);
+                
+                const observer = new MutationObserver(function() {
+                    fixLinks();
                 });
-              };
-              
-              updateSrcAttributes(document.querySelectorAll('img'), 'src');
-              updateSrcAttributes(document.querySelectorAll('script'), 'src');
-              updateSrcAttributes(document.querySelectorAll('link'), 'href');
-              updateSrcAttributes(document.querySelectorAll('form'), 'action');
-              
-              const metaTags = document.querySelectorAll('meta[content]');
-              metaTags.forEach(meta => {
-                const content = meta.getAttribute('content');
-                if (content && content.includes('${TARGET_DOMAIN}')) {
-                  meta.setAttribute('content', content.replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}'));
+                
+                observer.observe(document.documentElement, {
+                    childList: true,
+                    subtree: true
+                });
+                
+                const originalAssign = window.location.assign;
+                window.location.assign = function(url) {
+                    if (url.includes('${TARGET_DOMAIN}')) {
+                        url = url.replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}');
+                    }
+                    return originalAssign.call(window.location, url);
+                };
+                
+                const originalReplace = window.location.replace;
+                window.location.replace = function(url) {
+                    if (url.includes('${TARGET_DOMAIN}')) {
+                        url = url.replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}');
+                    }
+                    return originalReplace.call(window.location, url);
+                };
+                
+                const originalPushState = history.pushState;
+                history.pushState = function() {
+                    if (arguments[2] && typeof arguments[2] === 'string') {
+                        arguments[2] = arguments[2].replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}');
+                    }
+                    return originalPushState.apply(this, arguments);
+                };
+                
+                const originalReplaceState = history.replaceState;
+                history.replaceState = function() {
+                    if (arguments[2] && typeof arguments[2] === 'string') {
+                        arguments[2] = arguments[2].replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}');
+                    }
+                    return originalReplaceState.apply(this, arguments);
+                };
+                
+                if (window.location.href.includes('${TARGET_DOMAIN}')) {
+                    const newUrl = window.location.href.replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}');
+                    window.history.replaceState({}, document.title, newUrl);
                 }
-              });
-              
-              if (window.location.href.includes('${TARGET_DOMAIN}')) {
-                const newUrl = window.location.href.replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}');
-                window.history.replaceState({}, document.title, newUrl);
-              }
             } catch (e) {
-              console.error('Error in fixLinks:', e);
+                console.error('Error in main script:', e);
             }
-          }
-          
-          fixLinks();
-          
-          const observer = new MutationObserver(function() {
-            fixLinks();
-          });
-          
-          observer.observe(document.documentElement, {
-            childList: true,
-            subtree: true
-          });
-          
-          const originalAssign = window.location.assign;
-          window.location.assign = function(url) {
-            if (url.includes('${TARGET_DOMAIN}')) {
-              url = url.replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}');
-            }
-            return originalAssign.call(window.location, url);
-          };
-          
-          const originalReplace = window.location.replace;
-          window.location.replace = function(url) {
-            if (url.includes('${TARGET_DOMAIN}')) {
-              url = url.replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}');
-            }
-            return originalReplace.call(window.location, url);
-          };
-          
-          const originalPushState = history.pushState;
-          history.pushState = function() {
-            if (arguments[2] && typeof arguments[2] === 'string') {
-              arguments[2] = arguments[2].replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}');
-            }
-            return originalPushState.apply(this, arguments);
-          };
-          
-          const originalReplaceState = history.replaceState;
-          history.replaceState = function() {
-            if (arguments[2] && typeof arguments[2] === 'string') {
-              arguments[2] = arguments[2].replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}');
-            }
-            return originalReplaceState.apply(this, arguments);
-          };
-          
-          if (window.location.href.includes('${TARGET_DOMAIN}')) {
-            const newUrl = window.location.href.replace(new RegExp('${TARGET_DOMAIN}', 'g'), '${SOURCE_DOMAIN}');
-            window.history.replaceState({}, document.title, newUrl);
-          }
-        } catch (e) {
-          console.error('Error in main script:', e);
-        }
-      })();
-      </script>${CUSTOM_SCRIPT}`, {
-        html: true
-      });
+        })();
+        </script>${CUSTOM_SCRIPT}`, {
+            html: true
+        });
     }
   }
   
