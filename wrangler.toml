@@ -1,0 +1,9 @@
+name = "cloudflare-redirect"
+compatibility_date = "2024-03-01"
+
+[build]
+upload.format = "modules"
+upload.main = "./_worker.js"
+
+[env.production]
+name = "cloudflare-redirect-production"
