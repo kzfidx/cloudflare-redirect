@@ -1,5 +1,5 @@
 # Cloudflare 域名重定向 Worker
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/kzfidx/worker/cloudflare-redirect)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/kzfidx/cloudflare-redirect/worker)
 
 这是一个基于Cloudflare Workers的域名重定向解决方案，能够实现以下功能：
 ## 主要功能
