@@ -1,17 +1,17 @@
 /* CONFIGURATION STARTS HERE */
   
   /* Step 1: enter your source domain */
-  const SOURCE_DOMAIN = 'your-source-domain.com';
+  const SOURCE_DOMAIN = '';
   
   /* Step 2: enter your target domain */
-  const TARGET_DOMAIN = 'your-target-domain.com';
+  const TARGET_DOMAIN = '';
   
   /* Step 3: enter your page title and description for SEO purposes */
-  const PAGE_TITLE = 'Your Page Title';
-  const PAGE_DESCRIPTION = 'Your page description for SEO';
+  const PAGE_TITLE = '';
+  const PAGE_DESCRIPTION = '';
   
   /* Step 4: enter your Google Analytics ID (留空则不添加GA) */
-  const GA_ID = 'G-YOUR-GA-ID';
+  const GA_ID = '';
   
   /* Step 5: enter any custom scripts you'd like */
   const CUSTOM_SCRIPT = GA_ID ? 
@@ -35,11 +35,11 @@
   
   async function fetchAndApply(request, env) {
     /* 从环境变量读取配置，如果不存在则使用默认值 */
-    const SOURCE_DOMAIN = env && env.SOURCE_DOMAIN ? env.SOURCE_DOMAIN : 'your-source-domain.com';
-    const TARGET_DOMAIN = env && env.TARGET_DOMAIN ? env.TARGET_DOMAIN : 'your-target-domain.com';
-    const PAGE_TITLE = env && env.PAGE_TITLE ? env.PAGE_TITLE : 'Your Page Title';
-    const PAGE_DESCRIPTION = env && env.PAGE_DESCRIPTION ? env.PAGE_DESCRIPTION : 'Your page description for SEO';
-    const GA_ID = env && env.GA_ID ? env.GA_ID : 'G-YOUR-GA-ID';
+    const SOURCE_DOMAIN = env && env.SOURCE_DOMAIN ? env.SOURCE_DOMAIN : '';
+    const TARGET_DOMAIN = env && env.TARGET_DOMAIN ? env.TARGET_DOMAIN : '';
+    const PAGE_TITLE = env && env.PAGE_TITLE ? env.PAGE_TITLE : '';
+    const PAGE_DESCRIPTION = env && env.PAGE_DESCRIPTION ? env.PAGE_DESCRIPTION : '';
+    const GA_ID = env && env.GA_ID ? env.GA_ID : '';
     
     /* 根据GA_ID生成自定义脚本 */
     const CUSTOM_SCRIPT = GA_ID ? 
