@@ -35,7 +35,8 @@
         // 加载并渲染Markdown文件
         async function loadReadme() {
             try {
-                const response = await fetch('/README.md');
+                // 修改为相对路径
+                const response = await fetch('./README.md');
                 if (!response.ok) {
                     throw new Error('无法加载文档');
                 }
