@@ -69,6 +69,14 @@
     
     let url = new URL(request.url);
     
+    // 添加一个选项，允许设置是否使用301永久重定向
+    const USE_PERMANENT_REDIRECT = env && env.USE_PERMANENT_REDIRECT ? env.USE_PERMANENT_REDIRECT === 'true' : true;
+    
+    // 如果启用了永久重定向，为所有请求添加301状态码
+    if (USE_PERMANENT_REDIRECT) {
+      response.headers.set('X-Redirect-Type', 'Permanent (301)');
+    }
+    
     if (url.pathname === '/robots.txt') {
       return new Response('Sitemap: https://' + SOURCE_DOMAIN + '/sitemap.xml');
     }
@@ -170,7 +178,8 @@
             newLocation = 'https://' + SOURCE_DOMAIN + '/' + location;
           }
           
-          return Response.redirect(newLocation, response.status);
+          // 使用301状态码进行永久重定向，而不是保留原始状态码
+          return Response.redirect(newLocation, 301);
         }
         
         const originalBody = await response.text();
