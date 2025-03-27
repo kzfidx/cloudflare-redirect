@@ -69,10 +69,10 @@
     // 添加一个选项，允许设置是否使用301永久重定向
     const USE_PERMANENT_REDIRECT = env && env.USE_PERMANENT_REDIRECT ? env.USE_PERMANENT_REDIRECT === 'true' : true;
     
-    // 如果启用了永久重定向，为所有请求添加301状态码
-    if (USE_PERMANENT_REDIRECT) {
-      response.headers.set('X-Redirect-Type', 'Permanent (301)');
-    }
+    // 移除这行代码，因为response还未定义
+    // if (USE_PERMANENT_REDIRECT) {
+    //   response.headers.set('X-Redirect-Type', 'Permanent (301)');
+    // }
     
     if (url.pathname === '/robots.txt') {
       return new Response('Sitemap: https://' + SOURCE_DOMAIN + '/sitemap.xml');
@@ -202,6 +202,11 @@
       } catch (e) {
         return new Response(`代理请求错误: ${e.message}`, { status: 500 });
       }
+    }
+
+    // 如果启用了永久重定向，为响应添加301状态码标记
+    if (USE_PERMANENT_REDIRECT && response && response.headers) {
+      response.headers.set('X-Redirect-Type', 'Permanent (301)');
     }
 
     return appendModifications(response);
