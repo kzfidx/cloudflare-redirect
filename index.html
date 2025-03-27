@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <meta name="description" content="Cloudflare Worker实现的域名重定向解决方案，支持SEO优化、资源代理、API转发等功能">
     <meta name="keywords" content="Cloudflare, Worker, 域名重定向, SEO, 代理">
     <meta name="author" content="戴舒柯">
@@ -13,12 +14,28 @@
     <title>Cloudflare 域名重定向 Worker</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.1.0/github-markdown.min.css">
     <style>
+        :root {
+            --background-color-light: #ffffff;
+            --text-color-light: #000000;
+            --background-color-dark: #1a1a1a;
+            --text-color-dark: #ffffff;
+        }
+
         body {
             box-sizing: border-box;
             min-width: 200px;
             max-width: 980px;
             margin: 0 auto;
             padding: 45px;
+            background-color: var(--background-color-light);
+            color: var(--text-color-light);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: var(--background-color-dark);
+                color: var(--text-color-dark);
+            }
         }
         .markdown-body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
