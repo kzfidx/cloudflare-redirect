@@ -48,7 +48,7 @@
     const GA_ID = env && env.GA_ID ? env.GA_ID : '';
     const ADSENSE_ID = env && env.ADSENSE_ID ? env.ADSENSE_ID : '';
     
-    /* 根据GA_ID生成自定义脚本 */
+    /* 根据GA_ID和ADSENSE_ID生成自定义脚本 */
     const CUSTOM_SCRIPT = GA_ID ? 
     `<!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=${GA_ID}"></script>
@@ -60,6 +60,13 @@
     gtag('config', '${GA_ID}');
   </script>` : '';
   
+    const ADSENSE_SCRIPT = ADSENSE_ID ? 
+    `<!-- Google Adsense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_ID}" crossorigin="anonymous"></script>` : '';
+  
+    // 添加一个选项，允许设置是否使用301永久重定向
+    const USE_PERMANENT_REDIRECT = env && env.USE_PERMANENT_REDIRECT ? env.USE_PERMANENT_REDIRECT === 'true' : true;
+    
     if (request.method === 'OPTIONS') {
       return handleOptions(request);
     }
