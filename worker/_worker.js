@@ -13,9 +13,15 @@
   /* Step 4: enter your Google Analytics ID (留空则不添加GA) */
   const GA_ID = '';
   
-  /* Step 5: enter any custom scripts you'd like */
+  /* Step 5: enter your Google Analytics ID (留空则不添加GA) */
+  const GA_ID = '';
+  
+  /* Step 6: enter your Google Adsense ID (留空则不添加Adsense) */
+  const ADSENSE_ID = '';
+  
+  /* Step 7: enter any custom scripts you'd like */
   const CUSTOM_SCRIPT = GA_ID ? 
-  `<!-- Google tag (gtag.js) -->
+  `<!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=${GA_ID}"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -23,6 +29,10 @@
   gtag('js', new Date());
   gtag('config', '${GA_ID}');
 </script>` : '';
+  
+  const ADSENSE_SCRIPT = ADSENSE_ID ? 
+  `<!-- Google Adsense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_ID}" crossorigin="anonymous"></script>` : '';
   
   /* CONFIGURATION ENDS HERE */
   
@@ -39,6 +49,7 @@
     const PAGE_TITLE = env && env.PAGE_TITLE ? env.PAGE_TITLE : '';
     const PAGE_DESCRIPTION = env && env.PAGE_DESCRIPTION ? env.PAGE_DESCRIPTION : '';
     const GA_ID = env && env.GA_ID ? env.GA_ID : '';
+    const ADSENSE_ID = env && env.ADSENSE_ID ? env.ADSENSE_ID : '';
     
     /* 根据GA_ID生成自定义脚本 */
     const CUSTOM_SCRIPT = GA_ID ? 
@@ -395,7 +406,9 @@
                 console.error('Error in main script:', e);
             }
         })();
-        </script>${CUSTOM_SCRIPT}`, {
+        </script>
+        ${ADSENSE_SCRIPT}
+        ${CUSTOM_SCRIPT}`, {
             html: true
         });
     }
