@@ -15,13 +15,12 @@
   
   /* Step 5: enter any custom scripts you'd like */
   const CUSTOM_SCRIPT = GA_ID ? 
-  `<!-- Global site tag (gtag.js) - Google Analytics -->
+  `<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=${GA_ID}"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-
   gtag('config', '${GA_ID}');
 </script>` : '';
   
@@ -43,7 +42,7 @@
     
     /* 根据GA_ID生成自定义脚本 */
     const CUSTOM_SCRIPT = GA_ID ? 
-    `<!-- Global site tag (gtag.js) - Google Analytics -->
+    `<!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=${GA_ID}"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -193,6 +192,13 @@
   
   class HeadRewriter {
     element(element) {
+      // 将Google Analytics代码添加到head标签的开头，确保它尽早加载
+      if (GA_ID) {
+        element.prepend(CUSTOM_SCRIPT, {
+          html: true
+        });
+      }
+      
       element.prepend(`<script>
         document.addEventListener('DOMContentLoaded', function() {
           const baseElements = document.querySelectorAll('base');
