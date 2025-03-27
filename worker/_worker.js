@@ -63,9 +63,42 @@
       return new Response('Sitemap: https://' + SOURCE_DOMAIN + '/sitemap.xml');
     }
     if (url.pathname === '/sitemap.xml') {
-      let response = new Response(generateSitemap());
-      response.headers.set('content-type', 'application/xml');
-      return response;
+      try {
+        // 尝试获取目标网站的站点地图
+        const targetSitemapUrl = 'https://' + TARGET_DOMAIN + '/sitemap.xml';
+        const targetSitemapResponse = await fetch(targetSitemapUrl);
+        
+        if (targetSitemapResponse.ok) {
+          // 如果成功获取到目标站点地图，替换域名后返回
+          let sitemapContent = await targetSitemapResponse.text();
+          
+          // 更全面的替换，确保所有URL都被替换
+          // 替换完整的URL（包含http/https协议）
+          sitemapContent = sitemapContent.replace(new RegExp(`https?://${TARGET_DOMAIN}`, 'g'), `https://${SOURCE_DOMAIN}`);
+          
+          // 替换不带协议的URL
+          sitemapContent = sitemapContent.replace(new RegExp(`//${TARGET_DOMAIN}`, 'g'), `//${SOURCE_DOMAIN}`);
+          
+          // 替换可能存在的其他形式的URL
+          sitemapContent = sitemapContent.replace(new RegExp(`>${TARGET_DOMAIN}`, 'g'), `>${SOURCE_DOMAIN}`);
+          sitemapContent = sitemapContent.replace(new RegExp(`"${TARGET_DOMAIN}`, 'g'), `"${SOURCE_DOMAIN}`);
+          sitemapContent = sitemapContent.replace(new RegExp(`'${TARGET_DOMAIN}`, 'g'), `'${SOURCE_DOMAIN}`);
+          
+          let response = new Response(sitemapContent);
+          response.headers.set('content-type', 'application/xml');
+          return response;
+        } else {
+          // 如果获取失败，生成基本站点地图
+          let response = new Response(generateSitemap(SOURCE_DOMAIN));
+          response.headers.set('content-type', 'application/xml');
+          return response;
+        }
+      } catch (e) {
+        // 出错时生成基本站点地图
+        let response = new Response(generateSitemap(SOURCE_DOMAIN));
+        response.headers.set('content-type', 'application/xml');
+        return response;
+      }
     }
     
     let targetUrl = new URL(url.pathname, 'https://' + TARGET_DOMAIN);
@@ -369,4 +402,38 @@
       .on('head', new HeadRewriter())
       .on('body', new BodyRewriter())
       .transform(res);
+  }
+
+  // 生成基本站点地图
+  function generateSitemap(domain) {
+    const currentDate = new Date().toISOString().split('T')[0];
+    return `<?xml version="1.0" encoding="UTF-8"?>
+  <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+      <loc>https://${domain}/</loc>
+      <lastmod>${currentDate}</lastmod>
+      <changefreq>daily</changefreq>
+      <priority>1.0</priority>
+    </url>
+  </urlset>`;
+  }
+
+  // 处理OPTIONS请求
+  function handleOptions(request) {
+    let headers = request.headers;
+    if (
+      headers.get("Origin") !== null &&
+      headers.get("Access-Control-Request-Method") !== null &&
+      headers.get("Access-Control-Request-Headers") !== null
+    ) {
+      let respHeaders = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET,HEAD,POST,OPTIONS",
+        "Access-Control-Max-Age": "86400",
+        "Access-Control-Allow-Headers": request.headers.get("Access-Control-Request-Headers"),
+      };
+      return new Response(null, { headers: respHeaders });
+    } else {
+      return new Response(null, { headers: { Allow: "GET, HEAD, POST, OPTIONS" } });
+    }
   }
