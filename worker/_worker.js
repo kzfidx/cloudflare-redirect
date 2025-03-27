@@ -13,13 +13,10 @@
   /* Step 4: enter your Google Analytics ID (留空则不添加GA) */
   const GA_ID = '';
   
-  /* Step 5: enter your Google Analytics ID (留空则不添加GA) */
-  const GA_ID = '';
-  
-  /* Step 6: enter your Google Adsense ID (留空则不添加Adsense) */
+  /* Step 5: enter your Google Adsense ID (留空则不添加Adsense) */
   const ADSENSE_ID = '';
   
-  /* Step 7: enter any custom scripts you'd like */
+  /* Step 6: enter any custom scripts you'd like */
   const CUSTOM_SCRIPT = GA_ID ? 
   `<!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=${GA_ID}"></script>
