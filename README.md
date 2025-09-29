@@ -10,8 +10,10 @@
 4. **API代理**：支持API请求的转发
 5. **链接修复**：自动修复页面中的所有链接，确保它们指向源域名
 6. **Google Analytics**：支持集成Google Analytics
-7. **robots.txt和sitemap.xml**：自动生成SEO相关文件
-8. **安全增强**：添加X-Frame-Options等安全头
+7. **Google Adsense**：支持集成Google Adsense广告
+8. **robots.txt和sitemap.xml**：自动生成SEO相关文件
+9. **安全增强**：添加X-Frame-Options等安全头
+10. **高级图片处理**：支持处理各种图片属性、CSS背景图和CSS变量中的图片URL
 
 ## 使用步骤
 
@@ -39,6 +41,7 @@
      - `PAGE_TITLE`
      - `PAGE_DESCRIPTION`
      - `GA_ID`
+     - `ADSENSE_ID`
    - 在"触发器"中绑定你的源域名
 
 4. 验证部署：
