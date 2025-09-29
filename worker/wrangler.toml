@@ -7,9 +7,3 @@ main = "src/worker/_worker.js"
 
 [env.production]
 name = "cloudflare-redirect"
-
-# wrangler.toml (wrangler v3.88.0^)
-[observability.logs]
-enabled = true
-head_sampling_rate = 0.9
-
