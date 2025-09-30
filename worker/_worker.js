@@ -1,67 +1,64 @@
-// ===== 修复后的完整代码 =====
 // 定义默认配置
 const DEFAULT_CONFIG = {
   SOURCE_DOMAIN: '',
   TARGET_DOMAIN: '',
-  PAGE_TITLE: '',
-  PAGE_DESCRIPTION: '',
   GA_ID: '',
   ADSENSE_ID: '',
-  USE_PERMANENT_REDIRECT: true,
   REWRITE_IMAGE_URLS: true, // 是否重写图片URL
 };
-
-// MetaRewriter类 - 处理元标签
-class MetaRewriter {
-  element(element) {
-    // 可以在这里添加对meta标签的处理逻辑
-  }
-}
-
-// HeadRewriter类 - 处理头部内容
-class HeadRewriter {
-  element(element) {
-    // 可以在这里添加对head标签的处理逻辑
-  }
-}
 
 // BodyRewriter类 - 处理正文内容
 class BodyRewriter {
   constructor(config) {
     this.config = config || DEFAULT_CONFIG;
-    this.customScript = config.GA_ID ? `<!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=${config.GA_ID}"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', '${config.GA_ID}');
-  </script>` : '';
-    this.adsenseScript = config.ADSENSE_ID ? `<!-- Google Adsense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${config.ADSENSE_ID}" crossorigin="anonymous"></script>` : '';
   }
 
   element(element) {
+    // 生成脚本内容
+    const gaScript = this.config.GA_ID ? `
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=${this.config.GA_ID}"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '${this.config.GA_ID}');
+    </script>` : '';
+    
+    const adsenseScript = this.config.ADSENSE_ID ? `
+    <!-- Google Adsense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${this.config.ADSENSE_ID}" crossorigin="anonymous"></script>` : '';
+
     // 根据配置决定是否生成图片URL替换逻辑
-    const imageProcessingCode = this.config.REWRITE_IMAGE_URLS ? `
+    const imageProcessingCode = this.config.REWRITE_IMAGE_URLS ? this.generateImageProcessingCode() : 'function fixImageUrls() {}';
+
+    // 生成客户端JavaScript代码
+    const clientScript = this.generateClientScript(imageProcessingCode);
+
+    // 添加脚本到body末尾
+    element.append(clientScript, { html: true });
+    if (adsenseScript) element.append(adsenseScript, { html: true });
+    if (gaScript) element.append(gaScript, { html: true });
+  }
+
+  generateImageProcessingCode() {
+    return `
     // 增强的图片URL特殊处理函数
     function fixImageUrls() {
+        const TARGET_DOMAIN = '${this.config.TARGET_DOMAIN}';
+        const SOURCE_DOMAIN = '${this.config.SOURCE_DOMAIN}';
+        
         // 1. 处理所有图片标签
         const images = document.querySelectorAll('img:not([data-fixed-img])');
         images.forEach(img => {
             try {
-                // 处理所有可能的图片源属性
-                const srcAttributes = ['src', 'srcset', 'data-src', 'data-srcset', 'data-original', 'data-lazy-src', 'data-bgset', 'data-bg', 'data-image', 'data-background-image'];
+                const srcAttributes = ['src', 'srcset', 'data-src', 'data-srcset', 'data-original', 'data-lazy-src'];
                 
                 srcAttributes.forEach(attr => {
                     if (img.hasAttribute(attr)) {
                         const src = img.getAttribute(attr);
-                        if (src && (src.includes(TARGET_DOMAIN) || src.includes(encodeURIComponent(TARGET_DOMAIN)))) {
-                            // 增强的URL替换逻辑，处理各种编码和格式
-                            let fixedSrc = src.replace(new RegExp(TARGET_DOMAIN, 'g'), SOURCE_DOMAIN);
-                            fixedSrc = fixedSrc.replace(new RegExp(encodeURIComponent(TARGET_DOMAIN), 'g'), encodeURIComponent(SOURCE_DOMAIN));
-                            fixedSrc = fixedSrc.replace(new RegExp(encodeURI(TARGET_DOMAIN), 'g'), encodeURI(SOURCE_DOMAIN));
-                            
+                        if (src && src.includes(TARGET_DOMAIN)) {
+                            const fixedSrc = src.replace(new RegExp(TARGET_DOMAIN, 'g'), SOURCE_DOMAIN);
                             img.setAttribute(attr, fixedSrc);
                             
                             // 如果是主要的src属性，刷新图片
@@ -85,11 +82,8 @@ class BodyRewriter {
         styleElements.forEach(el => {
             try {
                 const style = el.getAttribute('style');
-                if (style && (style.includes(TARGET_DOMAIN) || style.includes(encodeURIComponent(TARGET_DOMAIN)))) {
-                    let fixedStyle = style.replace(new RegExp(TARGET_DOMAIN, 'g'), SOURCE_DOMAIN);
-                    fixedStyle = fixedStyle.replace(new RegExp(encodeURIComponent(TARGET_DOMAIN), 'g'), encodeURIComponent(SOURCE_DOMAIN));
-                    fixedStyle = fixedStyle.replace(new RegExp(encodeURI(TARGET_DOMAIN), 'g'), encodeURI(SOURCE_DOMAIN));
-                    
+                if (style && style.includes(TARGET_DOMAIN)) {
+                    const fixedStyle = style.replace(new RegExp(TARGET_DOMAIN, 'g'), SOURCE_DOMAIN);
                     el.setAttribute('style', fixedStyle);
                     el.setAttribute('data-fixed-style', 'true');
                 }
@@ -98,43 +92,13 @@ class BodyRewriter {
             }
         });
         
-        // 3. 处理CSS变量中的图片URL
-        const rootStyle = document.documentElement.style;
-        if (!document.documentElement.hasAttribute('data-fixed-cssvars')) {
-            try {
-                const computedStyle = getComputedStyle(document.documentElement);
-                for (let i = 0; i < computedStyle.length; i++) {
-                    const prop = computedStyle[i];
-                    if (prop.startsWith('--')) {
-                        const value = computedStyle.getPropertyValue(prop);
-                        if (value && (value.includes(TARGET_DOMAIN) || value.includes(encodeURIComponent(TARGET_DOMAIN)))) {
-                            let fixedValue = value.replace(new RegExp(TARGET_DOMAIN, 'g'), SOURCE_DOMAIN);
-                            fixedValue = fixedValue.replace(new RegExp(encodeURIComponent(TARGET_DOMAIN), 'g'), encodeURIComponent(SOURCE_DOMAIN));
-                            fixedValue = fixedValue.replace(new RegExp(encodeURI(TARGET_DOMAIN), 'g'), encodeURI(SOURCE_DOMAIN));
-                            
-                            rootStyle.setProperty(prop, fixedValue);
-                        }
-                    }
-                }
-                document.documentElement.setAttribute('data-fixed-cssvars', 'true');
-            } catch (e) {
-                console.error('Error fixing CSS variables:', e);
-            }
-        }
-        
-        // 4. 处理picture标签内的source元素
+        // 3. 处理picture标签内的source元素
         const sources = document.querySelectorAll('source:not([data-fixed-source])');
         sources.forEach(source => {
             try {
                 const srcset = source.getAttribute('srcset');
-                const media = source.getAttribute('media');
-                const sizes = source.getAttribute('sizes');
-                
-                if (srcset && (srcset.includes(TARGET_DOMAIN) || srcset.includes(encodeURIComponent(TARGET_DOMAIN)))) {
-                    let fixedSrcset = srcset.replace(new RegExp(TARGET_DOMAIN, 'g'), SOURCE_DOMAIN);
-                    fixedSrcset = fixedSrcset.replace(new RegExp(encodeURIComponent(TARGET_DOMAIN), 'g'), encodeURIComponent(SOURCE_DOMAIN));
-                    fixedSrcset = fixedSrcset.replace(new RegExp(encodeURI(TARGET_DOMAIN), 'g'), encodeURI(SOURCE_DOMAIN));
-                    
+                if (srcset && srcset.includes(TARGET_DOMAIN)) {
+                    const fixedSrcset = srcset.replace(new RegExp(TARGET_DOMAIN, 'g'), SOURCE_DOMAIN);
                     source.setAttribute('srcset', fixedSrcset);
                     
                     // 触发父级picture元素的图片重新加载
@@ -148,19 +112,16 @@ class BodyRewriter {
                         }
                     }
                 }
-                
                 source.setAttribute('data-fixed-source', 'true');
             } catch (e) {
                 console.error('Error fixing source:', e);
             }
         });
-    }` : `
-    // 不执行图片URL替换
-    function fixImageUrls() {}
-    `;
+    }`;
+  }
 
-    // 生成客户端JavaScript代码，用于在浏览器端继续修复链接和资源
-    const clientScript = `
+  generateClientScript(imageProcessingCode) {
+    return `
     <div style="display:none">Powered by Cloudflare Workers</div>
     <script>
     (function() {
@@ -171,7 +132,6 @@ class BodyRewriter {
             
             ${imageProcessingCode}
             
-            // 原有fixLinks函数的其他部分保持不变
             function fixLinks() {
                 try {
                     // 仅当URL变化时才执行链接修复
@@ -184,7 +144,7 @@ class BodyRewriter {
                                 link.href = link.href.replace(new RegExp(TARGET_DOMAIN, 'g'), SOURCE_DOMAIN);
                                 link.setAttribute('data-fixed', 'true');
                             }
-                            // 改进mailto链接处理
+                            // 处理邮件保护链接
                             if (link.href && link.href.includes('/cdn-cgi/l/email-protection')) {
                                 try {
                                     const decodedEmail = decodeEmail(link.href);
@@ -200,7 +160,7 @@ class BodyRewriter {
                         });
                     }
                     
-                    // 其他需要定期检查的元素
+                    // 更新其他元素的src属性
                     const updateSrcAttributes = (elements, attribute) => {
                         elements.forEach(el => {
                             if (!el.hasAttribute('data-fixed')) {
@@ -213,9 +173,7 @@ class BodyRewriter {
                         });
                     };
                     
-                    // 调用图片URL修复函数（根据配置决定是否实际执行替换）
                     fixImageUrls();
-                    
                     updateSrcAttributes(document.querySelectorAll('script:not([data-fixed])'), 'src');
                     updateSrcAttributes(document.querySelectorAll('link:not([data-fixed])'), 'href');
                     updateSrcAttributes(document.querySelectorAll('form:not([data-fixed])'), 'action');
@@ -225,22 +183,15 @@ class BodyRewriter {
                 }
             }
             
-            // 邮件解码函数和其他原有代码保持不变
+            // 邮件解码函数
             function decodeEmail(encoded) {
                 try {
-                    // 获取加密部分
                     const encryptedPart = encoded.split('#')[1];
-                    if (!encryptedPart) {
-                        throw new Error('Invalid email protection format');
-                    }
+                    if (!encryptedPart) throw new Error('Invalid email protection format');
                     
-                    // 获取密钥
                     const key = parseInt(encryptedPart.substr(0, 2), 16);
-                    if (isNaN(key)) {
-                        throw new Error('Invalid key');
-                    }
+                    if (isNaN(key)) throw new Error('Invalid key');
                     
-                    // 解码邮件地址
                     let decoded = '';
                     for (let i = 2; i < encryptedPart.length; i += 2) {
                         const hex = encryptedPart.substr(i, 2);
@@ -257,7 +208,7 @@ class BodyRewriter {
             // 立即执行一次
             fixLinks();
             
-            // 使用MutationObserver监听DOM变化，但添加节流
+            // 使用MutationObserver监听DOM变化
             let mutationTimeout;
             const observer = new MutationObserver(function() {
                 if (mutationTimeout) clearTimeout(mutationTimeout);
@@ -269,7 +220,7 @@ class BodyRewriter {
                 subtree: true
             });
             
-            // 重写location方法以确保域名替换
+            // 重写location和history方法
             const originalAssign = window.location.assign;
             window.location.assign = function(url) {
                 if (url.includes(TARGET_DOMAIN)) {
@@ -286,7 +237,6 @@ class BodyRewriter {
                 return originalReplace.call(window.location, url);
             };
             
-            // 重写history方法以确保域名替换
             const originalPushState = history.pushState;
             history.pushState = function() {
                 if (arguments[2] && typeof arguments[2] === 'string') {
@@ -309,46 +259,17 @@ class BodyRewriter {
                 window.history.replaceState({}, document.title, newUrl);
             }
             
-            // 增加频率的定期检查，确保动态加载的图片也能被处理
+            // 定期检查图片
             setInterval(fixImageUrls, 500);
         } catch (e) {
             console.error('Error in main script:', e);
         }
     })();
     </script>`;
-
-        // 将客户端脚本和其他脚本添加到body末尾
-        element.append(clientScript, {
-            html: true
-        });
-        
-        // 添加Adsense脚本（如果有）
-        if (this.adsenseScript) {
-            element.append(this.adsenseScript, {
-                html: true
-            });
-        }
-        
-        // 再次添加自定义脚本（确保在body末尾也有）
-        if (this.customScript) {
-            element.append(this.customScript, {
-                html: true
-            });
-        }
-    }
+  }
 }
 
 // ========== 辅助函数 ==========
-/**
- * 生成基本站点地图响应
- */
-function generateSitemapResponse(domain) {
-  const sitemapContent = generateSitemap(domain);
-  let response = new Response(sitemapContent);
-  response.headers.set('content-type', 'application/xml');
-  return response;
-}
-
 /**
  * 生成基本站点地图
  */
@@ -367,8 +288,42 @@ function generateSitemap(domain) {
 }
 
 /**
- * 处理OPTIONS请求
+ * 生成基本站点地图响应
  */
+function generateSitemapResponse(domain) {
+  const sitemapContent = generateSitemap(domain);
+  const response = new Response(sitemapContent);
+  response.headers.set('content-type', 'application/xml');
+  return response;
+}
+
+/**
+ * 处理域名替换的核心逻辑
+ */
+function replaceDomainInContent(content, targetDomain, sourceDomain) {
+  let modifiedContent = content;
+  
+  // 全面URL替换逻辑
+  modifiedContent = modifiedContent.replace(new RegExp(`https?://${targetDomain}`, 'g'), `https://${sourceDomain}`);
+  modifiedContent = modifiedContent.replace(new RegExp(`//${targetDomain}`, 'g'), `//${sourceDomain}`);
+  modifiedContent = modifiedContent.replace(new RegExp(`>${targetDomain}`, 'g'), `>${sourceDomain}`);
+  modifiedContent = modifiedContent.replace(new RegExp(`"${targetDomain}`, 'g'), `"${sourceDomain}`);
+  modifiedContent = modifiedContent.replace(new RegExp(`'${targetDomain}`, 'g'), `'${sourceDomain}`);
+  
+  // 反引号清理逻辑
+  modifiedContent = modifiedContent.replace(/"\s*`\s*([^`]+?)\s*`\s*"/g, '"$1"');
+  modifiedContent = modifiedContent.replace(/'\s*`\s*([^`]+?)\s*`\s*'/g, "'$1'");
+  modifiedContent = modifiedContent.replace(/=\s*`\s*([^`]+?)\s*`\s*>/g, '="$1">');
+  modifiedContent = modifiedContent.replace(/style=\s*"([^"`]*?)`([^`]+)`([^"`]*?)"/g, 'style="$1$2$3"');
+  modifiedContent = modifiedContent.replace(/(href|src|action|content|url)=\s*`\s*([^`]+?)\s*`/g, '$1="$2"');
+  modifiedContent = modifiedContent.replace(/property="(og:[^>]*?)"\s*content=\s*`\s*([^`]+?)\s*`/g, 'property="$1" content="$2"');
+  modifiedContent = modifiedContent.replace(/rel=\s*`\s*([^`]+?)\s*`/g, 'rel="$1"');
+  modifiedContent = modifiedContent.replace(/class=\s*`\s*([^`]+?)\s*`/g, 'class="$1"');
+  modifiedContent = modifiedContent.replace(/id=\s*`\s*([^`]+?)\s*`/g, 'id="$1"');
+  modifiedContent = modifiedContent.replace(/`\s*([^`]+?)\s*`/g, '$1');
+  
+  return modifiedContent;
+}
 function handleOptions(request) {
   // 处理CORS预检请求
   if (request.headers.has('Origin') &&
@@ -419,30 +374,20 @@ async function fetchAndApply(request, env) {
   // 处理sitemap.xml请求
   if (url.pathname === '/sitemap.xml') {
     try {
-      // 尝试获取目标网站的站点地图
       const targetSitemapUrl = 'https://' + config.TARGET_DOMAIN + '/sitemap.xml';
       const targetSitemapResponse = await fetch(targetSitemapUrl);
       
       if (targetSitemapResponse.ok) {
-        // 如果成功获取到目标站点地图，替换域名后返回
-        let sitemapContent = await targetSitemapResponse.text();
+        const sitemapContent = await targetSitemapResponse.text();
+        const modifiedContent = replaceDomainInContent(sitemapContent, config.TARGET_DOMAIN, config.SOURCE_DOMAIN);
         
-        // 全面替换所有URL格式
-        sitemapContent = sitemapContent.replace(new RegExp(`https?://${config.TARGET_DOMAIN}`, 'g'), `https://${config.SOURCE_DOMAIN}`);
-        sitemapContent = sitemapContent.replace(new RegExp(`//${config.TARGET_DOMAIN}`, 'g'), `//${config.SOURCE_DOMAIN}`);
-        sitemapContent = sitemapContent.replace(new RegExp(`>${config.TARGET_DOMAIN}`, 'g'), `>${config.SOURCE_DOMAIN}`);
-        sitemapContent = sitemapContent.replace(new RegExp(`"${config.TARGET_DOMAIN}`, 'g'), `"${config.SOURCE_DOMAIN}`);
-        sitemapContent = sitemapContent.replace(new RegExp(`'${config.TARGET_DOMAIN}`, 'g'), `'${config.SOURCE_DOMAIN}`);
-        
-        response = new Response(sitemapContent);
+        const response = new Response(modifiedContent);
         response.headers.set('content-type', 'application/xml');
         return response;
       } else {
-        // 如果获取失败，生成基本站点地图
         return generateSitemapResponse(config.SOURCE_DOMAIN);
       }
     } catch (e) {
-      // 出错时生成基本站点地图
       return generateSitemapResponse(config.SOURCE_DOMAIN);
     }
   }
@@ -453,29 +398,31 @@ async function fetchAndApply(request, env) {
 
   // 处理JavaScript文件请求
   if (url.pathname.endsWith('.js')) {
-    response = await fetch(targetUrl.toString());
-    let body = await response.text();
-    body = body.replace(new RegExp(config.TARGET_DOMAIN, 'g'), config.SOURCE_DOMAIN);
-    response = new Response(body, response);
-    response.headers.set('Content-Type', 'application/javascript');
-    response.headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=86400');
-    return response;
+    const response = await fetch(targetUrl.toString());
+    const body = await response.text();
+    const modifiedBody = replaceDomainInContent(body, config.TARGET_DOMAIN, config.SOURCE_DOMAIN);
+    
+    const newResponse = new Response(modifiedBody, response);
+    newResponse.headers.set('Content-Type', 'application/javascript');
+    newResponse.headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=86400');
+    return newResponse;
   }
 
   // 处理CSS文件请求
-  else if (url.pathname.endsWith('.css')) {
-    response = await fetch(targetUrl.toString());
-    let body = await response.text();
-    body = body.replace(new RegExp(config.TARGET_DOMAIN, 'g'), config.SOURCE_DOMAIN);
-    response = new Response(body, response);
-    response.headers.set('Content-Type', 'text/css');
-    response.headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=86400');
-    return response;
+  if (url.pathname.endsWith('.css')) {
+    const response = await fetch(targetUrl.toString());
+    const body = await response.text();
+    const modifiedBody = replaceDomainInContent(body, config.TARGET_DOMAIN, config.SOURCE_DOMAIN);
+    
+    const newResponse = new Response(modifiedBody, response);
+    newResponse.headers.set('Content-Type', 'text/css');
+    newResponse.headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=86400');
+    return newResponse;
   }
 
   // 处理API请求
-  else if (url.pathname.startsWith('/api')) {
-    response = await fetch(targetUrl.toString(), {
+  if (url.pathname.startsWith('/api')) {
+    const response = await fetch(targetUrl.toString(), {
       body: request.body,
       headers: {
         'content-type': 'application/json;charset=UTF-8',
@@ -483,10 +430,11 @@ async function fetchAndApply(request, env) {
       },
       method: request.method,
     });
-    response = new Response(response.body, response);
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    return response;
+    
+    const newResponse = new Response(response.body, response);
+    newResponse.headers.set('Access-Control-Allow-Origin', '*');
+    newResponse.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    return newResponse;
   }
 
   // 处理其他类型的请求
@@ -520,40 +468,15 @@ async function fetchAndApply(request, env) {
         return Response.redirect(newLocation, 301);
       }
       
-      // 修改响应内容，替换域名 - 改进后的URL替换逻辑
+      // 修改响应内容，替换域名
       const originalBody = await response.text();
-      let modifiedBody = originalBody;
+      const modifiedBody = replaceDomainInContent(originalBody, config.TARGET_DOMAIN, config.SOURCE_DOMAIN);
       
-      // 使用与sitemap.xml处理类似的全面URL替换逻辑
-      // 确保不会添加任何反引号
-      modifiedBody = modifiedBody.replace(new RegExp(`https?://${config.TARGET_DOMAIN}`, 'g'), `https://${config.SOURCE_DOMAIN}`);
-      modifiedBody = modifiedBody.replace(new RegExp(`//${config.TARGET_DOMAIN}`, 'g'), `//${config.SOURCE_DOMAIN}`);
-      modifiedBody = modifiedBody.replace(new RegExp(`>${config.TARGET_DOMAIN}`, 'g'), `>${config.SOURCE_DOMAIN}`);
-      modifiedBody = modifiedBody.replace(new RegExp(`"${config.TARGET_DOMAIN}`, 'g'), `"${config.SOURCE_DOMAIN}`);
-      modifiedBody = modifiedBody.replace(new RegExp(`'${config.TARGET_DOMAIN}`, 'g'), `'${config.SOURCE_DOMAIN}`);
-      
-      // ===== 全新的反引号清理逻辑 =====
-      // 1. 清理双引号内的反引号（处理有空格和无空格的情况）
-      modifiedBody = modifiedBody.replace(/"\s*`\s*([^`]+?)\s*`\s*"/g, '"$1"');
-      // 2. 清理单引号内的反引号（处理有空格和无空格的情况）
-      modifiedBody = modifiedBody.replace(/'\s*`\s*([^`]+?)\s*`\s*'/g, "'$1'");
-      // 3. 清理没有引号包裹的属性值中的反引号
-      modifiedBody = modifiedBody.replace(/=\s*`\s*([^`]+?)\s*`\s*>/g, '="$1">');
-      // 4. 特别处理style属性中的反引号
-      modifiedBody = modifiedBody.replace(/style=\s*"([^"`]*?)`([^`]+)`([^"`]*?)"/g, 'style="$1$2$3"');
-      // 5. 额外处理任何位置的反引号包裹的URL（常见属性）
-      modifiedBody = modifiedBody.replace(/(href|src|action|content|url)=\s*`\s*([^`]+?)\s*`/g, '$1="$2"');
-      // 6. 处理OG元标签中的反引号（Open Graph协议）
-      modifiedBody = modifiedBody.replace(/property="(og:[^>]*?)"\s*content=\s*`\s*([^`]+?)\s*`/g, 'property="$1" content="$2"');
-      // 7. 处理rel属性中的反引号
-      modifiedBody = modifiedBody.replace(/rel=\s*`\s*([^`]+?)\s*`/g, 'rel="$1"');
-      // 8. 处理class属性中的反引号
-      modifiedBody = modifiedBody.replace(/class=\s*`\s*([^`]+?)\s*`/g, 'class="$1"');
-      // 9. 处理id属性中的反引号
-      modifiedBody = modifiedBody.replace(/id=\s*`\s*([^`]+?)\s*`/g, 'id="$1"');
-      // 10. 终极清理：处理任何残留的反引号包裹内容
-      modifiedBody = modifiedBody.replace(/`\s*([^`]+?)\s*`/g, '$1');
-      response = new Response(modifiedBody, { status: response.status, statusText: response.statusText, headers: response.headers });
+      response = new Response(modifiedBody, { 
+        status: response.status, 
+        statusText: response.statusText, 
+        headers: response.headers 
+      });
       
       // ===== 安全头设置 =====
       // 修复CSP配置，使用正确的语法格式
@@ -589,8 +512,6 @@ async function fetchAndApply(request, env) {
 
   // 使用HTMLRewriter处理响应
   return new HTMLRewriter()
-    .on('meta', new MetaRewriter())
-    .on('head', new HeadRewriter())
     .on('body', new BodyRewriter(config))
     .transform(response);
 }
