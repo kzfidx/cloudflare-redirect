@@ -1,7 +1,7 @@
 name = "cloudflare-redirect"
 compatibility_date = "2024-03-01"
 compatibility_flags = ["nodejs_compat"]
-main = "worker/worker.js"  
+main = "src/worker/worker.js"  
 
 [env.production]
 name = "cloudflare-redirect"
